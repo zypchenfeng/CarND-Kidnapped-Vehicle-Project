@@ -163,7 +163,6 @@ void ParticleFilter::resample() {
 
 	// 2. get a random starting index number
 	discrete_distribution<int> rand_int{num_particles};
-	default_random_engine gen;
 	int index = rand_int(gen);
 	vector<Particle> new_particles;
 	double turn = 0.0;
