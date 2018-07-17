@@ -74,12 +74,12 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to
 	//   implement this method and use it as a helper during the updateWeights phase.
-
-	for (int i = 0; i < observations.size(); ++i) {
+	
+	for (unsigned int i = 0; i < observations.size(); ++i) {
 		double dist_min = std::numeric_limits<double>::infinity();
 		int min_index = -1;
 		for (unsigned int j = 0; j<predicted.size(); ++j) {
-			double dist_new = dist(predicted[i].x, predicted[i].y, observations[j].x, observations[j].y);
+			double dist_new = dist(predicted[j].x, predicted[j].y, observations[i].x, observations[i].y);
 			if (dist_new < dist_min) {
 				dist_min = dist_new;
 				min_index = predicted[j].id;
@@ -87,6 +87,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 		}
 		observations[i].id = min_index;
 	}
+	
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
@@ -113,7 +114,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double x_lm = map_landmarks.landmark_list[j].x_f;
 			double y_lm = map_landmarks.landmark_list[j].y_f;
 			unsigned int id_lm = map_landmarks.landmark_list[j].id_i;
-			if (fabs(x_lm - p_x) <= sensor_range && fabs(y_lm - p_y) <= sensor_range)
+			if (abs(x_lm - p_x) <= sensor_range && abs(y_lm - p_y) <= sensor_range)
 				predictions.push_back(LandmarkObs{ id_lm, x_lm, y_lm });			
 		}
 
@@ -139,7 +140,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 					double pd_y = predictions[n].y;
 					double std_x = std_landmark[0];
 					double std_y = std_landmark[1];
-					double w = 1 / (2 * M_PI*std_x * std_y) * exp(-(pow(pd_x - o_x, 2) / (2 * pow(std_x, 2)) + (pow(pd_y - o_y, 2) / (2 * pow(std_y, 2)))));
+					double w = 1 / (2 * M_PI*std_x * std_y) * exp(-(((pd_x - o_x)*(pd_x - o_x)) / (2.0 * std_x*std_x) + ((pd_y - o_y)*(pd_y - o_y)/ (2.0 * std_y*std_y))));
 					particles[i].weight *= w;
 				}					
 			}			 
@@ -155,22 +156,26 @@ void ParticleFilter::resample() {
 
 	// implement the weight wheel 
 	// 1. get the max weight
+	
 	vector<double> weights;
-	for (unsigned int i = 0; i <num_particles; ++i) {
+	for (int i = 0; i <num_particles; ++i) {
 		weights.push_back(particles[i].weight);
 	}
 	double max_weight = *max_element(weights.begin(), weights.end());
 
 	// 2. get a random starting index number
-	discrete_distribution<int> rand_int{num_particles};
+	discrete_distribution<int> rand_int(weights.begin(), weights.end());
 	int index = rand_int(gen);
+	double d_index = index;
+
 	vector<Particle> new_particles;
+
 	double turn = 0.0;
-	for (unsigned int i = 0; i <num_particles; ++i) {
-		turn += rand_int(gen)/ num_particles; 
+	for (int i = 0; i <num_particles; ++i) {
+		turn += d_index / num_particles * 2.0 * max_weight;
 		while (turn > weights[index]) {
 			turn -= weights[index];
-			index = (index + 1) %num_particles;
+			index = (index + 1) % num_particles;
 		}
 		new_particles.push_back(particles[index]);
 	}		
